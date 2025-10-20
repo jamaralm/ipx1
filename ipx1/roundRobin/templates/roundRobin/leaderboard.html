@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Classificação</title>
+    <style>
+        /* CSS Minimalista Dark Theme */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-color: #1a1d21;
+            --table-bg: #2a2d31;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --border-color: #3a3d41;
+            --hover-color: #383b3f;
+            --rank-gold: #ffd700;
+            --rank-silver: #c0c0c0;
+            --rank-bronze: #cd7f32;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: var(--table-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: var(--header-color);
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse; /* Remove espaços entre as células */
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Cabeçalho da Tabela */
+        thead th {
+            background-color: var(--bg-color);
+            color: var(--header-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        /* Corpo da Tabela */
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+
+        tbody td {
+            font-weight: 400;
+        }
+        
+        /* Coluna de Posição (Pos.) */
+        td.rank {
+            font-weight: 700;
+            font-size: 1.1em;
+            width: 40px;
+            text-align: center;
+        }
+        
+        /* Estilos para o Top 3 */
+        tr:nth-child(1) td.rank { color: var(--rank-gold); }
+        tr:nth-child(2) td.rank { color: var(--rank-silver); }
+        tr:nth-child(3) td.rank { color: var(--rank-bronze); }
+
+        /* Coluna de Nome (Jogador) */
+        td.player-name {
+            font-weight: 600;
+            color: var(--header-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Tabela de Classificação</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Pos.</th>
+                    <th>Jogador</th>
+                    <th>J</th> <th>V</th> <th>D</th> <th>Saldo K/D</th> <th>Farm Total</th>
+                    <th>T.M.V.</th> </tr>
+            </thead>
+            <tbody>
+                
+                {% for player in players %}
+                <tr>
+                    <td class="rank">{{ forloop.counter }}</td>
+                    
+                    <td class="player-name">{{ player.username }}</td>
+                    
+                    <td>{{ player.total_matches_played }}</td>
+                    
+                    <td>{{ player.wins }}</td>
+                    
+                    <td>{{ player.losses }}</td>
+                    
+                    <td>{{ player.kill_death_balance }}</td>
+                    
+                    <td>{{ player.total_farm }}</td>
+                    
+                    <td>{{ player.average_win_time_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="text-align: center;">Nenhum jogador encontrado.</td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
