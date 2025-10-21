@@ -22,8 +22,8 @@ jobs:
           script: |
             # 1. Entra na pasta (ou clona se não existir)
             # IMPORTANTE: Troque 'seu-usuario/seu-repo' pelo seu
-            cd /home/ubuntu/meu-campeonato || git clone https://github.com/seu-usuario/seu-repo.git /home/ubuntu/meu-campeonato
-            cd /home/ubuntu/meu-campeonato
+            cd /home/ubuntu/ipx1 || git clone https://github.com/jamaralm/ipx1.git /home/ubuntu/ipx1
+            cd /home/ubuntu/ipx1
             
             # 2. Puxa as últimas atualizações
             git checkout main
