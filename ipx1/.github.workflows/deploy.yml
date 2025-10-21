@@ -1,0 +1,46 @@
+name: Deploy to OCI (Docker Stack)
+
+on:
+  push:
+    branches:
+      - main # Roda toda vez que você der push na 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Deploy to OCI VM
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.OCI_SSH_HOST }}
+          username: ${{ secrets.OCI_SSH_USER }}
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            # 1. Entra na pasta (ou clona se não existir)
+            # IMPORTANTE: Troque 'seu-usuario/seu-repo' pelo seu
+            cd /home/ubuntu/meu-campeonato || git clone https://github.com/seu-usuario/seu-repo.git /home/ubuntu/meu-campeonato
+            cd /home/ubuntu/meu-campeonato
+            
+            # 2. Puxa as últimas atualizações
+            git checkout main
+            git pull origin main
+            
+            # 3. CRIA O ARQUIVO .env.prod na VM (A MÁGICA)
+            echo "${{ secrets.PROD_ENV_FILE }}" > .env.prod
+            
+            # 4. (Re)Constrói e (Re)Inicia todos os 3 containers
+            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml up -d --build
+            
+            # 5. Roda os comandos de migração DENTRO do container 'web'
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --no-input
+            
+            # 6. Roda o collectstatic DENTRO do container 'web'
+            docker-compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --no-input --clear
+            
+            # 7. Reinicia o Nginx do HOST (VM)
+            sudo systemctl restart nginx

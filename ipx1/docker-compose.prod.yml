@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+
+  # --- SERVIÇO 1: O BANCO DE DADOS POSTGRESQL ---
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      # 'postgres_data_prod' é o "cofre" que salva seus dados
+      # no disco da VM
+      - postgres_data_prod:/var/lib/postgresql/data
+    env_file:
+      - .env.prod # Carrega as senhas de produção
+    expose:
+      - '5432' # Apenas outros containers podem ver esta porta
+
+  # --- SERVIÇO 2: O APP DJANGO (GUNICORN) ---
+  web:
+    build: . # Constrói a partir do Dockerfile
+    restart: always
+    # IMPORTANTE: Troque 'ipx1.wsgi' se o nome da sua pasta de settings for outro
+    command: gunicorn ipx1.wsgi:application --bind 0.0.0.0:8000 --workers=4
+    volumes:
+      - staticfiles:/app/staticfiles
+      - mediafiles:/app/mediafiles
+    expose:
+      - '8000'
+    env_file:
+      - .env.prod
+    depends_on:
+      - db # Inicia o banco antes do app
+
+  # --- SERVIÇO 3: O NGINX INTERNO (PROXY REVERSO) ---
+  nginx:
+    image: nginx:1.21-alpine
+    restart: always
+    volumes:
+      # Monta nosso arquivo de configuração
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      # Lê os arquivos estáticos que o 'web' coletou
+      - staticfiles:/app/staticfiles:ro
+      - mediafiles:/app/mediafiles:ro
+    ports:
+      # Mapeia a porta 8080 do HOST (VM) para a porta 80 do Nginx-Container
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - web
+
+# --- Volumes (Os "Cofres") ---
+volumes:
+  postgres_data_prod:
+  staticfiles:
+  mediafiles:

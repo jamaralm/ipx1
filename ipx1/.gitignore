@@ -1,0 +1,14 @@
+# Segredos
+.env
+.env.prod
+
+# Banco de dados local
+db.sqlite3
+
+# Pasta do venv
+venv/
+
+# Arquivos do S.O.
+__pycache__/
+*.pyc
+.DS_Store
