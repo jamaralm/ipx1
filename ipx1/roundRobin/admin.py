@@ -53,77 +53,76 @@ class PlayerAdmin(admin.ModelAdmin):
 # 2. Configuração do Admin para o Modelo 'Match'
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
-    """
-    Configuração do Admin para Partidas.
-    Contém a lógica para processar os resultados automaticamente
-    e travar a partida após ser processada.
-    """
-
-    # --- O que mostrar na lista principal ---
     list_display = (
-        '__str__', # Mostra o "Player 1 vs Player 2"
+        '__str__',
+        'status', # NOVO
+        'round_number',
         'winner',
         'win_condition',
-        'duration',
-        'created_at',
+        'scheduled_time',
     )
-    
-    # --- Filtros na barra lateral ---
-    list_filter = ('win_condition', 'created_at')
-    
-    # --- Permitir busca pelos nomes dos jogadores ---
-    search_fields = ('player1__username', 'player2__username', 'winner__username')
-    
-    # --- Melhora a seleção de Jogadores (usa busca em vez de dropdown) ---
+    list_filter = ('status', 'round_number', 'scheduled_time')
     autocomplete_fields = ('player1', 'player2', 'winner')
+    
+    # Define quais campos aparecem no admin dependendo do status
+    def get_fieldsets(self, request, obj=None):
+        if obj is None: # Criando uma nova partida
+            return (
+                ('Agendamento', {
+                    'fields': ('round_number', 'player1', 'player2', 'scheduled_time')
+                }),
+            )
+        elif obj.status == Match.STATUS_SCHEDULED or obj.status == Match.STATUS_LIVE:
+            return (
+                ('Partida', {
+                    'fields': ('status', ('player1', 'player2'), 'round_number', 'scheduled_time')
+                }),
+                ('Resultado (Preencha para Concluir)', {
+                    'fields': ('winner', 'duration', 'player1_farm', 'player2_farm')
+                })
+            )
+        else: # Partida Concluída
+            return (
+                ('Partida (Concluída)', {
+                    'fields': ('status', ('player1', 'player2'), 'round_number')
+                }),
+                ('Resultado (Processado)', {
+                    'fields': ('winner', 'duration', 'win_condition', 'player1_farm', 'player2_farm')
+                })
+            )
 
-    # --- Organiza os campos no painel de edição ---
-    fieldsets = (
-        ('Partida', {
-            'fields': ('player1', 'player2')
-        }),
-        ('Resultado (Defina para processar)', {
-            'fields': ('winner', 'duration', 'player1_farm', 'player2_farm')
-        }),
-        ('Metadados (Automático)', {
-            'fields': ('win_condition', 'created_at')
-        }),
-    )
-
+    # Torna os campos de resultado "somente leitura" após a conclusão
     def get_readonly_fields(self, request, obj=None):
-        """
-        Torna a partida inteira "somente leitura" se já foi processada.
-        """
-        if obj and obj.winner:
-            # Se o objeto existe e tem um vencedor, trava todos os campos
-            # Isso previne que alguém mude o vencedor e corrompa as estatísticas
-            return [field.name for field in self.model._meta.fields]
-        
-        # Se for uma nova partida, apenas os campos automáticos são readonly
-        return ['created_at', 'win_condition']
+        if obj and obj.status == Match.STATUS_COMPLETED:
+            # Trava tudo exceto o status (caso precise reverter)
+            return ('player1', 'player2', 'round_number', 'scheduled_time', 
+                    'winner', 'duration', 'win_condition', 'player1_farm', 'player2_farm')
+        return ('win_condition',) # win_condition é sempre automático
 
+    # --- ESTA É A MÁGICA ---
     def save_model(self, request, obj: Match, form, change):
         """
-        Sobrescreve o método de salvar.
-        Executa 'process_match_results' ao salvar uma nova partida com vencedor.
+        Chamado quando o admin clica em "Salvar".
         """
-        
-        # Salva o objeto Match primeiro
+        # Salva o objeto primeiro (especialmente o 'status' e 'winner' que o admin mudou)
         super().save_model(request, obj, form, change)
         
-        # 'change' é False se for um objeto NOVO
-        # Verificamos se tem um vencedor E se ainda não foi processado (win_condition=None)
-        if obj.winner and not obj.win_condition:
+        # 'change' é True se for uma edição
+        # Verificamos se a partida foi movida para "Concluída" E se já tem um vencedor
+        # E se a 'win_condition' ainda não foi definida (para não rodar duas vezes)
+        if (change and 
+            obj.status == Match.STATUS_COMPLETED and 
+            obj.winner and 
+            not obj.win_condition):
+            
             try:
-                # Esta é a sua função mágica!
+                # Chama sua função para atualizar as estatísticas do Player
                 obj.process_match_results()
                 
-                # Envia uma mensagem de sucesso para o admin
                 self.message_user(request, 
-                                  "Partida processada com sucesso. As estatísticas dos jogadores foram atualizadas.", 
+                                  "Partida Concluída e estatísticas dos jogadores atualizadas.", 
                                   messages.SUCCESS)
             except Exception as e:
-                # Em caso de erro
                 self.message_user(request, 
-                                  f"ERRO ao processar resultados: {e}. As estatísticas podem estar inconsistentes.", 
+                                  f"ERRO ao processar resultados: {e}", 
                                   messages.ERROR)

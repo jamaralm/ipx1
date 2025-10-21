@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Meu Campeonato{% endblock %}</title>
+    
+    <style>
+        /* CSS Global e Dark Theme */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-color: #121212; /* Fundo mais escuro */
+            --sidebar-bg: #1e1e1e;
+            --content-bg: #1a1d21;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --header-color: #ffffff;
+            --border-color: #3a3d41;
+            --accent-color: #007bff; /* Um azul vibrante para o acento */
+            --hover-color: #2a2d31;
+            --win-color: #4CAF50;
+            --lose-color: #F44336;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* --- A Nova Barra Lateral --- */
+        .sidebar {
+            width: 240px;
+            height: 100vh; /* Altura total da tela */
+            position: fixed; /* Fica presa no lugar */
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .sidebar-header h2 {
+            color: var(--header-color);
+            font-weight: 700;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+        .nav-list li {
+            margin-bottom: 10px;
+        }
+        .nav-list a {
+            display: block;
+            padding: 12px 15px;
+            border-radius: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .nav-list a:hover {
+            background-color: var(--hover-color);
+            color: var(--header-color);
+        }
+        
+        /* Estilo do link ATIVO */
+        .nav-list a.active {
+            background-color: var(--accent-color);
+            color: var(--header-color);
+        }
+
+        /* --- O Conteúdo Principal --- */
+        .content {
+            /* Empurra o conteúdo para a direita da barra lateral */
+            margin-left: 240px; 
+            padding: 30px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px;
+            background-color: var(--content-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            margin-bottom: 15px;
+        }
+        
+        /* Estilos da Tabela (do seu leaderboard) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        thead th {
+            background-color: var(--bg-color);
+            color: var(--header-color);
+            font-weight: 600;
+        }
+        tbody tr:hover {
+            background-color: var(--hover-color);
+        }
+        
+        /* Estilos da Lista de Partidas (do seu match_list) */
+        .match-list { list-style: none; }
+        .match-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .round-header {
+            font-size: 1.5em;
+            margin-top: 30px;
+            border-bottom: 2px solid var(--accent-color);
+        }
+        .player-winner { font-weight: 700; color: var(--win-color); }
+        .player-loser { text-decoration: line-through; opacity: 0.7; }
+        .match-scheduled-time { color: var(--accent-color); }
+
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>IPX1</h2>
+        </div>
+        <ul class="nav-list">
+            <li>
+                <a href="{% url 'leaderboard' %}" 
+                   {% if request.resolver_match.url_name == 'leaderboard' %}class="active"{% endif %}>
+                   Classificação
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'match-list' %}"
+                   {% if request.resolver_match.url_name == 'match-list' %}class="active"{% endif %}>
+                   Partidas
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+</body>
+</html>

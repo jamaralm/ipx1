@@ -5,6 +5,8 @@ from django.db import transaction # Necessário para o @transaction.atomic
 
 # Define o tempo limite que diferencia uma vitória "rápida" de uma "longa"
 MATCH_FARM_LIMIT = timedelta(minutes=12)
+TOTAL_ROUNDS = 10
+ROUND_CHOICES = [ (i, f"Rodada {i}") for i in range(1, TOTAL_ROUNDS + 1) ]
 
 class Player(models.Model):
 
@@ -137,48 +139,60 @@ class Player(models.Model):
         self.refresh_from_db()
 
 class Match(models.Model):
+    
+    # --- NOVOS: Estados da Partida ---
+    STATUS_SCHEDULED = 'scheduled'
+    STATUS_LIVE = 'live'
+    STATUS_COMPLETED = 'completed'
+    
+    STATUS_CHOICES = [
+        (STATUS_SCHEDULED, 'Agendada'),
+        (STATUS_LIVE, 'Ao Vivo'),
+        (STATUS_COMPLETED, 'Concluída'),
+    ]
 
+    # --- NOVO: Campo de Status ---
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_SCHEDULED, # Toda nova partida começa como "Agendada"
+        db_index=True # Facilita filtrar por status
+    )
+
+    # --- Campos de Relacionamento ---
+    player1 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player1")
+    player2 = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="matches_as_player2")
+    
+    # --- Campos de Agendamento (Antes em ScheduledMatch) ---
+    round_number = models.IntegerField(choices=ROUND_CHOICES, default=1, db_index=True)
+    scheduled_time = models.DateTimeField(verbose_name="Horário Agendado", null=True, blank=True)
+    
+    # --- Campos de Resultado (Antes em Match, agora unificados) ---
+    winner = models.ForeignKey(
+        Player, 
+        on_delete=models.SET_NULL, 
+        related_name="won_matches",
+        null=True, # Partidas agendadas não têm vencedor
+        blank=True
+    )
+    
+    duration = models.DurationField(
+        verbose_name="Duração da Partida",
+        null=True, # Partidas agendadas não têm duração
+        blank=True
+    )
+    
     WIN_CONDITION_FIRST_BLOOD = 'first_blood'
     WIN_CONDITION_FARM = 'farm'
-    
     WIN_CONDITION_CHOICES = [
         (WIN_CONDITION_FIRST_BLOOD, "First Blood"),
         (WIN_CONDITION_FARM, "Farm"),
     ]
-
-    player1 = models.ForeignKey(
-        Player,
-        verbose_name="Jogador 1",
-        on_delete=models.CASCADE,
-        related_name="match_as_player1"
-    )
-
-    player2 = models.ForeignKey(
-        Player,
-        verbose_name="Jogador 2",
-        on_delete=models.CASCADE,
-        related_name="match_as_player2"
-    )
-
     win_condition = models.CharField(
-        verbose_name="Condição de Vitória",
-        max_length=20, # Deve ser grande o suficiente para 'first_blood'
+        max_length=20, 
         choices=WIN_CONDITION_CHOICES,
-        null=True,  # Permite nulo se a partida não acabou
-        blank=True  # Permite vazio
-    )
-
-    winner = models.ForeignKey(
-        Player,
-        verbose_name="Vencedor",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="won_matches"
-    )
-
-    duration = models.DurationField(
-        verbose_name="Duração da Partida"
+        null=True, # Partidas agendadas não têm condição de vitória
+        blank=True
     )
 
     player1_farm = models.IntegerField(default=0)
@@ -186,37 +200,57 @@ class Match(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['round_number', 'scheduled_time']
+        verbose_name = "Partida"
+        verbose_name_plural = "Partidas"
+
     def __str__(self):
-        if self.winner:
-            return f"{self.winner.username} venceu {self.player1.username} vs {self.player2.username} por {self.get_win_condition_display()}"
-        return f"{self.player1.username} vs {self.player2.username} (Em andamento)"
+        if self.status == self.STATUS_COMPLETED and self.winner:
+            return f"[R{self.round_number}] {self.winner.username} venceu ({self.get_win_condition_display()})"
+        elif self.status == self.STATUS_SCHEDULED:
+            return f"[R{self.round_number}] {self.player1.username} vs {self.player2.username} (Agendada)"
+        else:
+            return f"[R{self.round_number}] {self.player1.username} vs {self.player2.username} ({self.get_status_display()})"
+    
 
+    # --- LÓGICA DE PROCESSAMENTO (A mesma de antes) ---
+    # (Esta função SÓ deve ser chamada quando a partida é concluída)
+    @transaction.atomic
     def process_match_results(self):
-
+        """
+        Atualiza as estatísticas dos jogadores e salva a win_condition.
+        SÓ DEVE RODAR QUANDO UM VENCEDOR FOR DEFINIDO.
+        """
         if not self.winner:
-            # Não faz nada se a partida ainda não tiver um vencedor
+            # Segurança: não faz nada se não houver vencedor
             return
 
+        # 1. Determina Perdedor e Farms
         loser = self.player2 if self.winner == self.player1 else self.player1
-
         winner_farm = self.player1_farm if self.winner == self.player1 else self.player2_farm
         loser_farm = self.player2_farm if self.winner == self.player1 else self.player1_farm
 
+        # 2. Define a Win Condition
         if self.duration >= MATCH_FARM_LIMIT:
             self.win_condition = self.WIN_CONDITION_FARM
         else:
             self.win_condition = self.WIN_CONDITION_FIRST_BLOOD
 
-        self.save(update_fields=['win_condition'])
-
+        # 3. Atualiza Estatísticas do Vencedor
         self.winner.add_match_result(
             match_duration=self.duration,
             did_win=True,
             farm=winner_farm
         )
         
+        # 4. Atualiza Estatísticas do Perdedor
         loser.add_match_result(
             match_duration=self.duration,
             did_win=False,
             farm=loser_farm
         )
+        
+        # 5. Salva a win_condition na própria partida
+        # (O status já foi salvo pelo admin)
+        self.save(update_fields=['win_condition'])

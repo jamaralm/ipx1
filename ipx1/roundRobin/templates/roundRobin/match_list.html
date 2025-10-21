@@ -1,80 +1,67 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Histórico de Partidas</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        :root {
-            --bg-color: #1a1d21; --table-bg: #2a2d31; --text-color: #e0e0e0;
-            --header-color: #ffffff; --border-color: #3a3d41; --hover-color: #383b3f;
-            --win-color: #4CAF50; --lose-color: #F44336;
-        }
-        body {
-            font-family: 'Inter', sans-serif; background-color: var(--bg-color);
-            color: var(--text-color); margin: 0; padding: 20px;
-        }
-        .container {
-            max-width: 1000px; margin: 20px auto; padding: 20px;
-            background-color: var(--table-bg); border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        h1 {
-            color: var(--header-color); text-align: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px; margin-bottom: 20px;
-        }
-        /* Estilo para a lista de partidas */
-        .match-list {
-            list-style: none; padding: 0;
-        }
-        .match-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.2s ease;
-        }
-        .match-item:hover { background-color: var(--hover-color); }
-        .match-players { font-size: 1.1em; }
-        .player-winner { font-weight: 700; color: var(--win-color); }
-        .player-loser { text-decoration: line-through; opacity: 0.7; }
-        .match-details { text-align: right; color: #aaa; }
-        .match-condition { font-weight: 600; }
-    </style>
-</head>
-<body>
+{% extends "roundRobin/base.html" %}
+
+{% block title %}Lista de Partidas | Meu Campeonato{% endblock %}
+
+{% block content %}
     <div class="container">
-        <h1>Histórico de Partidas</h1>
-        <ul class="match-list">
+        <h1>Todas as Partidas</h1>
+
+        {% for round_data in rounds_list %}
             
-            {% for match in matches %}
-            <li class="match-item">
-                <div class="match-players">
-                    {% if match.winner == match.player1 %}
-                        <span class="player-winner">{{ match.player1.username }}</span>
-                        vs
-                        <span class="player-loser">{{ match.player2.username }}</span>
-                    {% else %}
-                        <span class="player-winner">{{ match.player2.username }}</span>
-                        vs
-                        <span class="player-loser">{{ match.player1.username }}</span>
-                    {% endif %}
-                </div>
+            <h2 class="round-header">Rodada {{ round_data.round_number }}</h2>
+
+            <ul class="match-list">
                 
-                <div class="match-details">
-                    <span class="match-condition">{{ match.get_win_condition_display }}</span>
-                    <div>{{ match.duration }}</div>
-                </div>
-            </li>
-            {% empty %}
-            <li class="match-item" style="justify-content: center;">
-                Nenhuma partida encontrada.
-            </li>
-            {% endfor %}
-        </ul>
+                {% for match in round_data.matches %}
+                <li class="match-item">
+                    
+                    {% if match.status == STATUS_COMPLETED %}
+                        <div class="match-players">
+                            {% if match.winner == match.player1 %}
+                                <span class="player-winner">{{ match.player1.username }}</span>
+                                vs
+                                <span class="player-loser">{{ match.player2.username }}</span>
+                            {% else %}
+                                <span class="player-winner">{{ match.player2.username }}</span>
+                                vs
+                                <span class="player-loser">{{ match.player1.username }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="match-details">
+                            <span style="color: var(--win-color)">{{ match.get_win_condition_display }}</span>
+                            <div>{{ match.duration }}</div>
+                        </div>
+                    
+                    {% elif match.status == STATUS_LIVE %}
+                        <div class="match-players">
+                            <span style="color: var(--text-color)">{{ match.player1.username }}</span>
+                            vs
+                            <span style="color: var(--text-color)">{{ match.player2.username }}</span>
+                        </div>
+                        <div class="match-details">
+                            <span style="color: var(--lose-color); font-weight: 700;">AO VIVO</span>
+                        </div>
+
+                    {% else %}
+                        <div class="match-players">
+                            <span style="color: var(--text-muted)">{{ match.player1.username }}</span>
+                            vs
+                            <span style="color: var(--text-muted)">{{ match.player2.username }}</span>
+                        </div>
+                        <div class="match-details">
+                            <span class="match-scheduled-time">
+                                {{ match.scheduled_time|date:"d/m H:i" }}
+                            </span>
+                        </div>
+                    {% endif %}
+                
+                </li>
+                {% endfor %}
+            </ul>
+        
+        {% empty %}
+            <p style="text-align: center;">Nenhuma partida agendada ou concluída no sistema.</p>
+        {% endfor %}
+
     </div>
-</body>
-</html>
+{% endblock %}
