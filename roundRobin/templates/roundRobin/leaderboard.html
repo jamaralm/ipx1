@@ -6,43 +6,44 @@
     <div class="container">
         <h1>Tabela de Classificação</h1>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Pos.</th>
-                    <th>Jogador</th>
-                    <th>J</th>
-                    <th>V</th>
-                    <th>D</th>
-                    <th>Saldo K/D</th>
-                    <th>Farm Total</th>
-                    <th>T.M.V.</th>
-                </tr>
-            </thead>
-            <tbody>
-                
-                {% for player in players %}
-                <tr>
-                    <td class="rank">{{ forloop.counter }}</td>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pos.</th>
+                        <th>Jogador</th>
+                        <th>J</th>
+                        <th>V</th>
+                        <th>D</th>
+                        <th>Saldo K/D</th>
+                        <th>Farm Total</th>
+                        <th>T.M.V.</th>
+                    </tr>
+                </thead>
+                <tbody>
                     
-                    <td class="player-name">{{ player.username }}</td>
-                    
-                    <td>{{ player.total_matches_played }}</td>
-                    <td>{{ player.wins }}</td>
-                    <td>{{ player.losses }}</td>
-                    <td>{{ player.kill_death_balance }}</td>
-                    <td>{{ player.total_farm }}</td>
-                    <td>{{ player.average_win_time_display }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" style="text-align: center;">Nenhum jogador encontrado.</td>
-                </tr>
-                {% endfor %}
+                    {% for player in players %}
+                    <tr>
+                        <td class="rank">{{ forloop.counter }}</td>
+                        
+                        <td class="player-name">{{ player.username }}</td>
+                        
+                        <td>{{ player.total_matches_played }}</td>
+                        <td>{{ player.wins }}</td>
+                        <td>{{ player.losses }}</td>
+                        <td>{{ player.kill_death_balance }}</td>
+                        <td>{{ player.total_farm }}</td>
+                        <td>{{ player.average_win_time_display }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" style="text-align: center;">Nenhum jogador encontrado.</td>
+                    </tr>
+                    {% endfor %}
 
-            </tbody>
-        </table>
-    </div>
+                </tbody>
+            </table>
+        </div> </div>
 
     <style>
         .rank {

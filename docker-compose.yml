@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    # Mapeia a porta 5432 do contêiner para a 5433 da sua máquina
+    ports:
+      - "5433:5432"
+    # Carrega as senhas de DESENVOLVIMENTO
+    env_file:
+      - .env.dev
+
+  # --- SERVIÇO 2: O APP DJANGO (DEV) ---
+  web:
+    build: . # Constrói a partir do seu Dockerfile (que está ótimo)
+    
+    command: python manage.py runserver 0.0.0.0:8000
+    
+    volumes:
+      - .:/app
+      
+    ports:
+      - "8000:8000"
+      
+    # Carrega as variáveis de DESENVOLVIMENTO
+    env_file:
+      - .env.dev
+      
+    # Espera o banco subir antes de iniciar o Django
+    depends_on:
+      - db
+
+# --- Volumes (Os "Cofres" de DEV) ---
+volumes:
+  postgres_data_dev:
+    # 'driver: local' é o padrão, mas é bom ser explícito
+    driver: local

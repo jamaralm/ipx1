@@ -1,6 +1,7 @@
 # Segredos
 .env
 .env.prod
+.env.dev
 
 # Banco de dados local
 db.sqlite3
