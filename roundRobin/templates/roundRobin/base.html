@@ -36,7 +36,7 @@
             line-height: 1.6;
         }
 
-        /* --- A Nova Barra Lateral --- */
+        /* --- A Barra Lateral (Desktop) --- */
         .sidebar {
             width: 240px;
             height: 100vh; /* Altura total da tela */
@@ -83,7 +83,7 @@
             color: var(--header-color);
         }
 
-        /* --- O Conteúdo Principal --- */
+        /* --- O Conteúdo Principal (Desktop) --- */
         .content {
             /* Empurra o conteúdo para a direita da barra lateral */
             margin-left: 240px; 
@@ -142,6 +142,89 @@
         .player-loser { text-decoration: line-through; opacity: 0.7; }
         .match-scheduled-time { color: var(--accent-color); }
 
+        
+        /* ========================================= */
+        /* === INÍCIO DAS REGRAS DE RESPONSIVIDADE === */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            
+            /* 1. Transforma a Sidebar em um Header */
+            .sidebar {
+                position: static; /* Deixa de ser fixa */
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 0 15px; /* Ajusta o padding */
+                
+                /* Alinha o Logo e a Nav */
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .sidebar-header {
+                margin-bottom: 0;
+                text-align: left;
+            }
+            .nav-list {
+                display: flex; /* Faz os links ficarem lado a lado */
+            }
+            .nav-list li {
+                margin-bottom: 0;
+                margin-left: 5px;
+            }
+            .nav-list a {
+                padding: 15px 10px; /* Ajusta o padding do link */
+            }
+            
+            /* 2. Remove a margem do conteúdo */
+            .content {
+                margin-left: 0; /* Remove a margem da sidebar */
+                padding: 15px;
+            }
+            .container {
+                padding: 15px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            /* 3. Faz a Tabela (Leaderboard) rolar horizontalmente */
+            .table-wrapper {
+                overflow-x: auto; /* A MÁGICA! */
+                -webkit-overflow-scrolling: touch; /* Melhora a rolagem no iOS */
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+            }
+            /* Força a tabela a não "espremer" as colunas */
+            .table-wrapper table {
+                white-space: nowrap;
+                min-width: 600px; /* Garante que a tabela tenha um tamanho mínimo */
+            }
+            th, td {
+                padding: 10px; /* Diminui o padding em telas menores */
+            }
+            h1 {
+                font-size: 1.8em; /* Diminui o H1 */
+            }
+            
+            /* 4. Empilha a Lista de Partidas (Match List) */
+            .match-item {
+                flex-direction: column; /* Empilha os itens */
+                align-items: flex-start; /* Alinha no início */
+                padding: 12px;
+            }
+            .match-players {
+                font-size: 1.1em;
+            }
+            .match-details {
+                text-align: left; /* Alinha à esquerda */
+                width: 100%;
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px dashed var(--border-color);
+            }
+        }
+        
     </style>
 </head>
 <body>

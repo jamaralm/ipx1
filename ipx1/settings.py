@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 import dj_database_url
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -119,9 +122,33 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = '/media/'
+if DEBUG:
+    # --- Configuração de Estáticos e Mídia para DEV ---
+    
+        # URL para acessar os arquivos estáticos no navegador
+    STATIC_URL = '/static/'
+
+    # Caminho para onde o 'collectstatic' vai jogar os arquivos
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
+
+    # Caminhos onde o Django procura os estáticos do seu app (CSS, JS, etc.)
+    STATICFILES_DIRS = [
+        os.path.join(BASE_DIR, 'static'),
+    ]
+
+    # Caminho para onde os usuários farão upload
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'mediafiles')
+    # URL para acessar os uploads no navegador
+    MEDIA_URL = '/media/'
+    
+    # Reseta as configurações da AWS para usar o armazenamento local
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage' # (ou similar)
+
+else:
+    STATIC_URL = '/static/'
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

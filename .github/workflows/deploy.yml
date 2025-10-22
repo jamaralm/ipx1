@@ -3,7 +3,7 @@ name: Deploy to OCI (Docker Stack)
 on:
   push:
     branches:
-      - main # Roda toda vez que você der push na 'main'
+      - main
 
 jobs:
   deploy:
