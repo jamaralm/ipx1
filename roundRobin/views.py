@@ -1,25 +1,24 @@
 from django.shortcuts import render
-from .models import Player, Match, TOTAL_ROUNDS
+from .models import Player, Match, TOTAL_ROUNDS, STATUS_COMPLETED, STATUS_LIVE, STATUS_SCHEDULED
 
 def leaderboard_view(request):
     """
     Busca TODAS as partidas (agendadas e completas)
     e as organiza por rodada para exibir no template.
     """
-    rounds_data = []
+    all_players = Player.objects.all()
 
-    # Busca todos os jogadores no banco de dados
-    # A ordenação é a chave:
-    # 1º: Ordena por 'wins' (descendente, quem tem mais vence)
-    # 2º: Desempata por 'losses' (ascendente, quem tem menos perde)
-    players_list = Player.objects.all().order_by('-wins', 'losses')
+    sorted_players = sorted(
+        all_players, 
+        key=lambda p: (p.series_wins, -p.series_losses, p.kill_death_balance), 
+        reverse=True # Ordena pelo primeiro critério (series_wins) do maior para o menor
+    )
 
-    # Envia a lista de jogadores para o template
     context = {
-        'players': players_list
+        'players': sorted_players,
+        # (Passe as constantes de status para o template, se necessário)
+        'STATUS_COMPLETED': STATUS_COMPLETED, 
     }
-    
-    # Renderiza o HTML que você pediu
     return render(request, 'roundRobin/leaderboard.html', context)
 
 def match_list_view(request):
@@ -46,9 +45,12 @@ def match_list_view(request):
         'rounds_list': rounds_data,
         
         # NOVO: Passamos as constantes de status para o template
-        'STATUS_COMPLETED': Match.STATUS_COMPLETED,
-        'STATUS_LIVE': Match.STATUS_LIVE,
-        'STATUS_SCHEDULED': Match.STATUS_SCHEDULED,
+        'STATUS_COMPLETED': STATUS_COMPLETED,
+        'STATUS_LIVE': STATUS_LIVE,
+        'STATUS_SCHEDULED': STATUS_SCHEDULED,
     }
     
     return render(request, 'roundRobin/match_list.html', context)
+
+def livestream_view(request):
+    return render(request, 'roundRobin/livestream.html')
