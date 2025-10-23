@@ -17,6 +17,15 @@ WIN_CONDITION_CHOICES = [
     (WIN_CONDITION_FARM, "Farm"),
 ]
 
+STATUS_SCHEDULED = 'scheduled'
+STATUS_LIVE = 'live'
+STATUS_COMPLETED = 'completed'
+STATUS_CHOICES = [
+    (STATUS_SCHEDULED, 'Agendada'),
+    (STATUS_LIVE, 'Ao Vivo'),
+    (STATUS_COMPLETED, 'Concluída'),
+]
+
 class Player(models.Model):
 
     # --- CAMPOS ARMAZENADOS NO BANCO DE DADOS ---
@@ -76,6 +85,25 @@ class Player(models.Model):
         minutes = total_seconds // 60
         seconds = total_seconds % 60
         return f"{minutes:02}:{seconds:02}"
+
+    @property
+    def series_played(self):
+        """ Retorna a contagem de SéRIES (Matches) jogadas. """
+        # (Nós usamos os 'related_name's que já existem no seu modelo Match)
+        played_as_p1 = self.matches_as_player1.filter(status=STATUS_COMPLETED).count()
+        played_as_p2 = self.matches_as_player2.filter(status=STATUS_COMPLETED).count()
+        return played_as_p1 + played_as_p2
+
+    @property
+    def series_wins(self):
+        """ Retorna a contagem de SéRIES (Matches) ganhas. """
+        # (related_name 'won_matches' do campo Match.series_winner)
+        return self.won_matches.filter(status=STATUS_COMPLETED).count()
+
+    @property
+    def series_losses(self):
+        """ Retorna a contagem de SéRIES (Matches) perdidas. """
+        return self.series_played - self.series_wins
 
     @transaction.atomic 
     def add_match_result(self, match_duration: timedelta, did_win: bool, farm: int):
