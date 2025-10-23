@@ -18,7 +18,7 @@ def leaderboard_view(request):
         all_players, 
         key=lambda p: (
             # Critério 1: Mais Séries Vencidas (o '-' inverte a ordem, de Maior para Menor)
-            -p.wins,           
+            -p.series_wins,           
             
             # Critério 2: Menor Tempo Médio de Vitória (Menor para Maior)
             p.average_win_time,       
