@@ -17,14 +17,10 @@ def leaderboard_view(request):
     sorted_players = sorted(
         all_players, 
         key=lambda p: (
-            # Critério 1: Mais Séries Vencidas (o '-' inverte a ordem, de Maior para Menor)
             -p.series_wins,           
-            
-            # Critério 2: Menor Tempo Médio de Vitória (Menor para Maior)
-            p.average_win_time,       
-            
-            # Critério 3: Maior Saldo K/D (o '-' inverte a ordem)
-            -p.kill_death_balance     
+            -p.kill_death_balance,
+            -p.total_farm,
+            p.average_win_time, 
         )
     )
     
