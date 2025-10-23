@@ -17,7 +17,7 @@
                     
                     {% if match.status == STATUS_COMPLETED %}
                         <div class="match-players">
-                            {% if match.winner == match.player1 %}
+                            {% if match.series_winner == match.player1 %}
                                 <span class="player-winner">{{ match.player1.username }}</span>
                                 vs
                                 <span class="player-loser">{{ match.player2.username }}</span>
