@@ -1,128 +1,169 @@
 from django.contrib import admin, messages
-from .models import Player, Match
+from django.db import transaction
 
-# 1. Configuração do Admin para o Modelo 'Player'
+# --- IMPORTS CORRIGIDOS ---
+from .models import Player, Match, Game 
+from .models import MATCH_FARM_LIMIT, WIN_CONDITION_FARM, WIN_CONDITION_FIRST_BLOOD
+
+# --- ADMIN DO PLAYER (O SEU ORIGINAL, SEM 'is_approved') ---
 @admin.register(Player)
 class PlayerAdmin(admin.ModelAdmin):
-    """
-    Configuração do Admin para Jogadores.
-    As estatísticas são "somente leitura" (readonly) porque são
-    calculadas automaticamente a partir das partidas.
-    """
-    
-    # --- O que mostrar na lista principal ---
-    list_display = (
-        'username', 
-        'winrate', 
-        'wins', 
-        'losses', 
-        'total_matches_played', 
-        'kill_death_balance',
-        'average_win_time_display' # Usando a propriedade formatada
-    )
-    
-    # --- Permitir busca pelo nome ---
+    list_display = ('username', 'wins', 'losses', 'winrate')
     search_fields = ('username',)
-    
-    # --- Campos que aparecem no formulário de edição/criação ---
-    # Campos "readonly" não podem ser editados manualmente, protegendo os dados
-    readonly_fields = (
-        'wins', 'losses', 'first_blood_wins', 'farm_wins', 
-        'total_farm', 'total_kills', 'total_deaths', 'total_win_time',
-        'total_matches_played', 'average_win_time_display', 
-        'winrate', 'kill_death_balance'
-    )
-    
-    # --- Organiza os campos no painel de edição ---
-    fieldsets = (
-        (None, {
-            'fields': ('username',) # Único campo editável
-        }),
-        ('Estatísticas de Jogo (Calculadas)', {
-            'classes': ('collapse',), # Começa "fechado"
-            'fields': (
-                ('wins', 'losses', 'total_matches_played'),
-                ('winrate', 'kill_death_balance'),
-                ('first_blood_wins', 'farm_wins'),
-                ('total_farm', 'total_kills', 'total_deaths'),
-                ('total_win_time', 'average_win_time_display'),
-            )
-        }),
-    )
+    # (Removido 'is_approved' do list_display e list_filter)
 
-# 2. Configuração do Admin para o Modelo 'Match'
+
+# --- O "EDITOR DE JOGOS" (MD3) ---
+class GameInline(admin.TabularInline):
+    model = Game
+    fields = ('game_number', 'winner', 'duration', 'player1_farm', 'player2_farm')
+    readonly_fields = ('win_condition', 'is_processed')
+    extra = 3
+    max_num = 3
+    autocomplete_fields = ('winner',)
+
+    def get_formset(self, request, obj=None, **kwargs):
+        if obj:
+            # Passa o 'obj' (o Match) para o formfield_callback
+            kwargs['formfield_callback'] = lambda field: self.formfield_for_dbfield(field, request, obj=obj)
+        return super().get_formset(request, obj, **kwargs)
+
+    def formfield_for_dbfield(self, db_field, request, obj=None, **kwargs):
+        """
+        Altera o rótulo (label) dos campos de farm para 
+        mostrar o nome do jogador correto.
+        """
+        field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if obj: # obj é o 'Match'
+            # --- CORREÇÃO IMPORTANTE AQUI ---
+            # (Usando player.username, não player.user.username)
+            if db_field.name == 'player1_farm':
+                field.label = f"Farm ({obj.player1.username})"
+            if db_field.name == 'player2_farm':
+                field.label = f"Farm ({obj.player2.username})"
+        return field
+
+
+# --- O "ADMIN DO CONFRONTO" (MD3) ---
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
+    
+    # (Corrigido para usar 'series_winner' e remover 'win_condition')
     list_display = (
         '__str__',
-        'status', # NOVO
+        'status',
         'round_number',
-        'winner',
-        'win_condition',
+        'series_winner', 
         'scheduled_time',
     )
     list_filter = ('status', 'round_number', 'scheduled_time')
-    autocomplete_fields = ('player1', 'player2', 'winner')
+    inlines = [GameInline]
     
-    # Define quais campos aparecem no admin dependendo do status
+    # (Corrigido para usar 'series_winner')
+    autocomplete_fields = ('player1', 'player2', 'series_winner')
+    
+    # --- LÓGICA DE EXIBIÇÃO ---
     def get_fieldsets(self, request, obj=None):
-        if obj is None: # Criando uma nova partida
+        if obj is None: # Criando
             return (
                 ('Agendamento', {
                     'fields': ('round_number', 'player1', 'player2', 'scheduled_time')
                 }),
             )
-        elif obj.status == Match.STATUS_SCHEDULED or obj.status == Match.STATUS_LIVE:
-            return (
-                ('Partida', {
-                    'fields': ('status', ('player1', 'player2'), 'round_number', 'scheduled_time')
-                }),
-                ('Resultado (Preencha para Concluir)', {
-                    'fields': ('winner', 'duration', 'player1_farm', 'player2_farm')
-                })
-            )
-        else: # Partida Concluída
-            return (
-                ('Partida (Concluída)', {
+        else: # Editando
+             return (
+                ('Confronto', {
                     'fields': ('status', ('player1', 'player2'), 'round_number')
                 }),
-                ('Resultado (Processado)', {
-                    'fields': ('winner', 'duration', 'win_condition', 'player1_farm', 'player2_farm')
+                ('Resultado da Série (MD3)', {
+                    'fields': ('series_winner',) 
                 })
             )
 
-    # Torna os campos de resultado "somente leitura" após a conclusão
     def get_readonly_fields(self, request, obj=None):
         if obj and obj.status == Match.STATUS_COMPLETED:
-            # Trava tudo exceto o status (caso precise reverter)
-            return ('player1', 'player2', 'round_number', 'scheduled_time', 
-                    'winner', 'duration', 'win_condition', 'player1_farm', 'player2_farm')
-        return ('win_condition',) # win_condition é sempre automático
-
-    # --- ESTA É A MÁGICA ---
-    def save_model(self, request, obj: Match, form, change):
-        """
-        Chamado quando o admin clica em "Salvar".
-        """
-        # Salva o objeto primeiro (especialmente o 'status' e 'winner' que o admin mudou)
-        super().save_model(request, obj, form, change)
+            return ('player1', 'player2', 'round_number', 'scheduled_time', 'series_winner')
         
-        # 'change' é True se for uma edição
-        # Verificamos se a partida foi movida para "Concluída" E se já tem um vencedor
-        # E se a 'win_condition' ainda não foi definida (para não rodar duas vezes)
-        if (change and 
-            obj.status == Match.STATUS_COMPLETED and 
-            obj.winner and 
-            not obj.win_condition):
+        # O Vencedor da Série é sempre somente leitura, pois é calculado
+        return ('series_winner',)
+
+
+    # --- A LÓGICA DE PROCESSAMENTO (MD3) ---
+    @transaction.atomic
+    def save_related(self, request, form, formsets, change):
+        """
+        Chamado quando o admin clica em "Salvar" e os 'inlines' (Games) 
+        também precisam ser salvos.
+        """
+        # Salva o Match e os Games primeiro
+        super().save_related(request, form, formsets, change)
+
+        obj: Match = form.instance 
+        
+        if obj.status != Match.STATUS_COMPLETED:
+            return 
+
+        # Filtra jogos que têm vencedor E que ainda não foram processados
+        games_to_process = obj.games.filter(winner__isnull=False, is_processed=False)
+
+        if not games_to_process.exists() and not change:
+             # Se não há novos jogos para processar e é uma nova criação, sai
+            return
+
+        # --- AQUI É ONDE RECALCULAMOS TUDO ---
+        # 1. Zera as estatísticas ANTES de reprocessar
+        # (Para evitar duplicatas se o admin salvar de novo)
+        
+        # (Esta é uma lógica complexa de "reversão". Por enquanto,
+        # vamos confiar no 'is_processed=False' para evitar reprocessamento)
+        
+        # Loop pelos jogos *novos*
+        for game in games_to_process:
+            game: Game 
             
-            try:
-                # Chama sua função para atualizar as estatísticas do Player
-                obj.process_match_results()
-                
-                self.message_user(request, 
-                                  "Partida Concluída e estatísticas dos jogadores atualizadas.", 
-                                  messages.SUCCESS)
-            except Exception as e:
-                self.message_user(request, 
-                                  f"ERRO ao processar resultados: {e}", 
-                                  messages.ERROR)
+            loser = game.match.player2 if game.winner == game.match.player1 else game.match.player1
+            winner_farm = game.player1_farm if game.winner == game.match.player1 else game.player2_farm
+            loser_farm = game.player2_farm if game.winner == game.match.player1 else game.player1_farm
+
+            # Define a Win Condition do JOGO
+            if game.duration >= MATCH_FARM_LIMIT:
+                game.win_condition = WIN_CONDITION_FARM
+            else:
+                game.win_condition = WIN_CONDITION_FIRST_BLOOD
+
+            # ATUALIZA ESTATÍSTICAS DO VENCEDOR
+            game.winner.add_match_result(
+                match_duration=game.duration,
+                did_win=True,
+                farm=winner_farm
+            )
+            
+            # ATUALIZA ESTATÍSTICAS DO PERDEDOR
+            loser.add_match_result(
+                match_duration=game.duration,
+                did_win=False,
+                farm=loser_farm
+            )
+            
+            game.is_processed = True
+            game.save() 
+            
+        # --- FIM DO LOOP DE GAMES ---
+            
+        # Recalcula o VENCEDOR DA SÉRIE (MD3)
+        p1_wins = obj.games.filter(winner=obj.player1).count()
+        p2_wins = obj.games.filter(winner=obj.player2).count()
+
+        if p1_wins >= 2:
+            obj.series_winner = obj.player1
+        elif p2_wins >= 2:
+            obj.series_winner = obj.player2
+        else:
+            obj.series_winner = None 
+
+        obj.save() 
+        
+        if games_to_process.exists():
+            self.message_user(request, 
+                              "Resultados dos jogos processados e estatísticas atualizadas.", 
+                              messages.SUCCESS)

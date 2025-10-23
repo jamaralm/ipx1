@@ -1,0 +1,22 @@
+{% extends "roundRobin/base.html" %}
+
+{% block title %}Transmissão Ao Vivo | Meu Campeonato{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Transmissão Ao Vivo</h1>
+        <p style="margin-bottom: 20px; color: var(--text-muted);">
+            Acompanhe as partidas do campeonato ao vivo!
+        </p>
+
+        <div class="video-wrapper-16-9">
+
+            <iframe 
+                src="https://player.kick.com/xkingjokerx10" 
+                frameborder="0" 
+                scrolling="no" 
+                allowfullscreen="true">
+            </iframe>
+            
+        </div> </div>
+{% endblock %}

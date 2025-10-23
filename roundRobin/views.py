@@ -3,23 +3,35 @@ from .models import Player, Match, TOTAL_ROUNDS
 
 def leaderboard_view(request):
     """
-    Busca TODAS as partidas (agendadas e completas)
-    e as organiza por rodada para exibir no template.
+    Busca todos os jogadores e os ordena pelos critérios de desempate
+    (Séries > T.M.V. > Saldo K/D) para exibir na tabela.
     """
-    rounds_data = []
+    
+    # 1. Pega todos os jogadores
+    # (Se você já tivesse o 'is_approved', filtraria aqui)
+    all_players = Player.objects.all() 
 
-    # Busca todos os jogadores no banco de dados
-    # A ordenação é a chave:
-    # 1º: Ordena por 'wins' (descendente, quem tem mais vence)
-    # 2º: Desempata por 'losses' (ascendente, quem tem menos perde)
-    players_list = Player.objects.all().order_by('-wins', 'losses')
-
-    # Envia a lista de jogadores para o template
+    # 2. Ordena a lista em Python usando sorted()
+    #    'key=lambda p:' é uma mini-função que diz ao sorted() como comparar.
+    
+    sorted_players = sorted(
+        all_players, 
+        key=lambda p: (
+            # Critério 1: Mais Séries Vencidas (o '-' inverte a ordem, de Maior para Menor)
+            -p.wins,           
+            
+            # Critério 2: Menor Tempo Médio de Vitória (Menor para Maior)
+            p.average_win_time,       
+            
+            # Critério 3: Maior Saldo K/D (o '-' inverte a ordem)
+            -p.kill_death_balance     
+        )
+    )
+    
     context = {
-        'players': players_list
+        'players': sorted_players
     }
     
-    # Renderiza o HTML que você pediu
     return render(request, 'roundRobin/leaderboard.html', context)
 
 def match_list_view(request):
@@ -52,3 +64,6 @@ def match_list_view(request):
     }
     
     return render(request, 'roundRobin/match_list.html', context)
+
+def livestream_view(request):
+    return render(request, 'roundRobin/livestream.html')
