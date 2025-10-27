@@ -167,3 +167,4 @@ class MatchAdmin(admin.ModelAdmin):
             self.message_user(request, 
                               "Resultados dos jogos processados e estatísticas atualizadas.", 
                               messages.SUCCESS)
+                              
