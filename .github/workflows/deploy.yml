@@ -35,7 +35,7 @@ jobs:
             
             # 4. (Re)Constrói e (Re)Inicia todos os 3 containers
             docker-compose -f docker-compose.prod.yml down
-            docker-compose -f docker-compose.prod.yml up -d --build
+            docker-compose -f docker-compose.prod.yml up -d --build --no-cache
             
             # 5. Roda os comandos de migração DENTRO do container 'web'
             docker-compose -f docker-compose.prod.yml exec -T web python manage.py migrate --no-input
