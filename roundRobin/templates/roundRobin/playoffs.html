@@ -1,0 +1,199 @@
+{% extends "roundRobin/base.html" %}
+
+{% block title %}Chave de Playoffs | IPX1{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="page-title">Chave dos Playoffs</h1>
+
+    {% if not_enough_players %}
+        <h3 style="color: var(--lose-color); text-align: center;">Não há jogadores suficientes!</h3>
+        <p style="text-align: center; color: var(--text-muted);">
+            São necessários pelo menos 4 jogadores com estatísticas para gerar a chave dos playoffs.
+        </p>
+
+    {% else %}
+        <div class="playoff-bracket-horizontal">
+            
+            <div class="bracket-stage">
+                <h3 class="stage-title">Quartas de Final</h3>
+                <div class="bracket-match">
+                    <div class="team team-seed-3">
+                        <span class="seed">3</span>
+                        <span class="player-name">{{ third_place.username }}</span>
+                    </div>
+                    <div class="team team-seed-4">
+                        <span class="seed">4</span>
+                        <span class="player-name">{{ fourth_place.username }}</span>
+                    </div>
+                    <div class="match-score">
+                        <span class="winner-label">QUARTAS</span>
+                        <span class="series-status">Não jogado</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bracket-stage">
+                <h3 class="stage-title">Semi-Final</h3>
+                <div class="bracket-match">
+                    <div class="team team-seed-2">
+                        <span class="seed">2</span>
+                        <span class="player-name">{{ second_place.username }}</span>
+                    </div>
+                    <div class="team team-placeholder">
+                        <span class="seed">?</span>
+                        <span class="player-name">Vencedor QF</span>
+                    </div>
+                    <div class="match-score">
+                        <span class="winner-label">SEMI</span>
+                        <span class="series-status">Não jogado</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bracket-stage">
+                <h3 class="stage-title">Grande Final</h3>
+                <div class="bracket-match">
+                    <div class="team team-seed-1">
+                        <span class="seed">1</span>
+                        <span class="player-name">{{ first_place.username }}</span>
+                    </div>
+                    <div class="team team-placeholder">
+                        <span class="seed">?</span>
+                        <span class="player-name">Vencedor SF</span>
+                    </div>
+                    <div class="match-score">
+                        <span class="winner-label">FINAL</span>
+                        <span class="series-status">Não jogado</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .page-title {
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 2.5em;
+        color: var(--header-color);
+    }
+
+    /* O NOVO LAYOUT HORIZONTAL */
+    .playoff-bracket-horizontal {
+        display: flex;
+        flex-direction: row; /* Alinha as etapas lado a lado */
+        justify-content: space-between; /* Espaço igual entre elas */
+        align-items: flex-start; /* Alinha pelo topo */
+        gap: 20px; /* Espaço entre as caixas */
+    }
+
+    .bracket-stage {
+        flex: 1; /* Faz cada etapa ter a mesma largura */
+        min-width: 250px; /* Largura mínima para cada caixa */
+    }
+
+    .stage-title {
+        text-align: center;
+        font-size: 1.5em;
+        color: var(--header-color);
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--accent-color);
+        padding-bottom: 10px;
+    }
+
+
+    /* --- ESTILO DAS CAIXAS (Copiado do estilo "NBA") --- */
+    .bracket-match {
+        background-color: var(--content-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        position: relative; 
+        width: 100%; /* Ocupa 100% da .bracket-stage */
+    }
+
+    .team {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px; /* Mais padding */
+        font-size: 1em; /* Fonte um pouco maior */
+        font-weight: 600;
+        color: var(--header-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+    .team:last-of-type {
+        border-bottom: none;
+    }
+
+    .seed {
+        background-color: var(--accent-color);
+        color: var(--header-color);
+        padding: 4px 8px;
+        border-radius: 3px;
+        margin-right: 12px; /* Mais espaço */
+        font-size: 0.9em;
+        font-weight: 700;
+        min-width: 32px; /* Tamanho do seed */
+        text-align: center;
+    }
+
+    /* Cores dos Seeds */
+    .team-seed-1 .seed { background-color: #ffd700; color: #121212; }
+    .team-seed-2 .seed { background-color: #c0c0c0; color: #121212; }
+    .team-seed-3 .seed { background-color: #cd7f32; }
+    .team-seed-4 .seed { background-color: var(--accent-color); }
+
+    .player-name {
+        flex-grow: 1; 
+    }
+
+    .team-placeholder {
+        color: var(--text-muted);
+        font-style: italic;
+    }
+    .team-placeholder .seed {
+        background-color: var(--text-muted);
+    }
+
+    .match-score {
+        background-color: var(--bg-color);
+        padding: 8px 15px; /* Mais padding */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.85em;
+        color: var(--text-muted);
+    }
+
+    .winner-label {
+        font-weight: 700;
+        color: var(--accent-color);
+        text-transform: uppercase;
+    }
+    .series-status {
+        font-weight: 400;
+    }
+    /* --- FIM DO ESTILO DAS CAIXAS --- */
+
+
+    /* RESPONSIVIDADE */
+    @media (max-width: 900px) {
+        .playoff-bracket-horizontal {
+            flex-direction: column; /* Empilha as etapas */
+            gap: 40px; /* Mais espaço entre elas */
+            align-items: center; /* Centraliza tudo */
+        }
+
+        .bracket-stage {
+            width: 100%;
+            max-width: 350px; /* Limita a largura no mobile */
+        }
+    }
+
+</style>
+{% endblock %}
