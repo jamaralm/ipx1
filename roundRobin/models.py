@@ -105,6 +105,10 @@ class Player(models.Model):
         """ Retorna a contagem de SéRIES (Matches) perdidas. """
         return self.series_played - self.series_wins
 
+    @property
+    def points(self):
+        return self.series_wins * 3
+
     @transaction.atomic 
     def add_match_result(self, match_duration: timedelta, did_win: bool, farm: int):
         update_fields = {}

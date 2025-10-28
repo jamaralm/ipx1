@@ -17,6 +17,7 @@ def leaderboard_view(request):
     sorted_players = sorted(
         all_players, 
         key=lambda p: (
+            -p.points,
             -p.series_wins,           
             -p.kill_death_balance,
             -p.total_farm,
