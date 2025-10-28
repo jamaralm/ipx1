@@ -20,15 +20,16 @@ jobs:
           username: ${{ secrets.OCI_SSH_USER }}
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
-            cd /home/ubuntu/ipx1 || git clone https://github.com/jamaralm/ipx1.git /home/ubuntu/ipx1
-            
+            cd /home/ubuntu/ipx1 || git clone https://github.com/jamaralm/ipx1.git /home/ubuntu/ipx1          
             cd /home/ubuntu/ipx1
 
             git fetch origin
-
             git reset --hard origin/main
             
             echo "${{ secrets.PROD_ENV_FILE }}" > .env.prod
+
+            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml rm -f
 
             docker-compose -f docker-compose.prod.yml up -d --build --force-recreate
 
