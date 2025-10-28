@@ -31,6 +31,32 @@ def leaderboard_view(request):
     
     return render(request, 'roundRobin/leaderboard.html', context)
 
+def playoffs_view(request):
+    all_players = Player.objects.all()
+
+    sorted_players = sorted(all_players, key=lambda p: (
+            -p.points,
+            -p.series_wins,           
+            -p.kill_death_balance,
+            -p.total_farm,
+            p.average_win_time, 
+        ))
+
+    if len(sorted_players) < 4:
+        return render(request, 'roundRobin/playoffs.html', {
+            'not_enough_players': True
+    })
+
+    context = {
+        'first_place': sorted_players[0],
+        'second_place': sorted_players[1],
+        'third_place': sorted_players[2],
+        'fourth_place': sorted_players[3],
+        'not_enough_players': False
+    }
+    
+    return render(request, 'roundRobin/playoffs.html', context)
+
 def match_list_view(request):
     """
     Busca TODAS as partidas e as organiza por rodada.

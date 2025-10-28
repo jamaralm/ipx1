@@ -264,6 +264,12 @@
                 </a>
             </li>
             <li>
+                <a href="{% url 'playoffs' %}"
+                   {% if request.resolver_match.url_name == 'playoffs' %}class="active"{% endif %}>
+                   Playoffs
+                </a>
+            </li>
+            <li>
                 <a href="{% url 'livestream' %}"
                    {% if request.resolver_match.url_name == 'livestream' %}class="active"{% endif %}>
                    Live
