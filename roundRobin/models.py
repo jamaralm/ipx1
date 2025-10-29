@@ -129,6 +129,26 @@ class Player(models.Model):
         Player.objects.filter(pk=self.pk).update(**update_fields)
         self.refresh_from_db()
 
+    @transaction.atomic
+    def remove_match_result(self, match_duration: timedelta, did_win: bool, farm: int):
+        update_fields = {}
+        if did_win:
+            update_fields['wins'] = F('wins') - 1
+            update_fields['total_win_time'] = F('total_win_time') - match_duration
+            if match_duration >= MATCH_FARM_LIMIT:
+                update_fields['farm_wins'] = F('farm_wins') - 1
+            else: 
+                update_fields['first_blood_wins'] = F('first_blood_wins') - 1
+                update_fields['total_kills'] = F('total_kills') - 1
+            update_fields['total_farm'] = F('total_farm') - farm
+        else:
+            update_fields['losses'] = F('losses') - 1
+            update_fields['total_farm'] = F('total_farm') - farm
+            if match_duration < MATCH_FARM_LIMIT:
+                update_fields['total_deaths'] = F('total_deaths') - 1
+        Player.objects.filter(pk=self.pk).update(**update_fields)
+        self.refresh_from_db()
+
 class Match(models.Model):
     
     # --- NOVOS: Estados da Partida ---
