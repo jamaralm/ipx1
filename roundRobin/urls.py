@@ -10,4 +10,5 @@ urlpatterns = [
     path('livestream/', views.livestream_view, name='livestream'),
     path('leaderboard/', views.leaderboard_view, name='leaderboard'),
     path('matches/', views.match_list_view, name='match-list'),
+    path('playoffs/', views.playoffs_view, name='playoffs'),
 ]
