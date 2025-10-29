@@ -91,80 +91,90 @@ class MatchAdmin(admin.ModelAdmin):
     # --- A LÓGICA DE PROCESSAMENTO (MD3) ---
     @transaction.atomic
     def save_related(self, request, form, formsets, change):
-        """
-        Chamado quando o admin clica em "Salvar" e os 'inlines' (Games) 
-        também precisam ser salvos.
-        """
-        # Salva o Match e os Games primeiro
         super().save_related(request, form, formsets, change)
 
         obj: Match = form.instance 
+        player1 = obj.player1
+        player2 = obj.player2
         
-        if obj.status != Match.STATUS_COMPLETED:
-            return 
+        games_to_revert = obj.games.filter(is_processed=True, winner__isnull=False)
 
-        # Filtra jogos que têm vencedor E que ainda não foram processados
-        games_to_process = obj.games.filter(winner__isnull=False, is_processed=False)
-
-        if not games_to_process.exists() and not change:
-             # Se não há novos jogos para processar e é uma nova criação, sai
-            return
-
-        # --- AQUI É ONDE RECALCULAMOS TUDO ---
-        # 1. Zera as estatísticas ANTES de reprocessar
-        # (Para evitar duplicatas se o admin salvar de novo)
-        
-        # (Esta é uma lógica complexa de "reversão". Por enquanto,
-        # vamos confiar no 'is_processed=False' para evitar reprocessamento)
-        
-        # Loop pelos jogos *novos*
-        for game in games_to_process:
+        for game in games_to_revert:
             game: Game 
             
             loser = game.match.player2 if game.winner == game.match.player1 else game.match.player1
+            
             winner_farm = game.player1_farm if game.winner == game.match.player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == game.match.player1 else game.player1_farm
 
-            # Define a Win Condition do JOGO
-            if game.duration >= MATCH_FARM_LIMIT:
-                game.win_condition = WIN_CONDITION_FARM
-            else:
-                game.win_condition = WIN_CONDITION_FIRST_BLOOD
-
-            # ATUALIZA ESTATÍSTICAS DO VENCEDOR
-            game.winner.add_match_result(
+            game.winner.remove_match_result(
                 match_duration=game.duration,
                 did_win=True,
                 farm=winner_farm
             )
             
-            # ATUALIZA ESTATÍSTICAS DO PERDEDOR
+            loser.remove_match_result(
+                match_duration=game.duration,
+                did_win=False,
+                farm=loser_farm
+            )
+            
+        obj.games.update(is_processed=False, win_condition=None)
+        obj.series_winner = None
+            
+
+
+        if obj.status != Match.STATUS_COMPLETED:
+            obj.save()
+            self.message_user(request, "Estatísticas da série foram revertidas.", messages.WARNING)
+            return
+
+        all_completed_games = obj.games.filter(winner__isnull=False)
+
+        p1_series_wins = 0
+        p2_series_wins = 0
+
+        for game in all_completed_games:
+            game: Game
+
+            loser = player2 if game.winner == player1 else player1
+
+            winner_farm = game.player1_farm if game.winner == player1 else game.player2_farm
+            loser_farm = game.player2_farm if game.winner == player1 else game.player1_farm
+            
+
+            if game.duration >= MATCH_FARM_LIMIT:
+                game.win_condition = WIN_CONDITION_FARM
+            else:
+                game.win_condition = WIN_CONDITION_FIRST_BLOOD
+            
+            game.winner.add_match_result(
+                match_duration=game.duration,
+                did_win=True,
+                farm=winner_farm
+            )
+
             loser.add_match_result(
                 match_duration=game.duration,
                 did_win=False,
                 farm=loser_farm
             )
             
+            if game.winner == player1:
+                p1_series_wins += 1
+            else:
+                p2_series_wins += 1
+
             game.is_processed = True
-            game.save() 
-            
-        # --- FIM DO LOOP DE GAMES ---
-            
-        # Recalcula o VENCEDOR DA SÉRIE (MD3)
-        p1_wins = obj.games.filter(winner=obj.player1).count()
-        p2_wins = obj.games.filter(winner=obj.player2).count()
+            game.save()
 
-        if p1_wins >= 2:
-            obj.series_winner = obj.player1
-        elif p2_wins >= 2:
-            obj.series_winner = obj.player2
-        else:
-            obj.series_winner = None 
+        if p1_series_wins >= 2:
+            obj.series_winner = player1
+        elif p2_series_wins >= 2:
+            obj.series_winner = player2
 
-        obj.save() 
+        obj.save()
         
-        if games_to_process.exists():
-            self.message_user(request, 
-                              "Resultados dos jogos processados e estatísticas atualizadas.", 
-                              messages.SUCCESS)
-                              
+        self.message_user(request, 
+                          "Estatísticas da série foram recalculadas e salvas com sucesso.", 
+                          messages.SUCCESS)
