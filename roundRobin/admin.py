@@ -3,7 +3,7 @@ from django.db import transaction
 
 # --- IMPORTS CORRIGIDOS ---
 from .models import Player, Match, Game 
-from .models import MATCH_FARM_LIMIT, WIN_CONDITION_FARM, WIN_CONDITION_FIRST_BLOOD
+from .models import MATCH_FARM_LIMIT, WIN_CONDITION_FARM_80, WIN_CONDITION_TIME_FARM, WIN_CONDITION_FIRST_BLOOD
 
 # --- ADMIN DO PLAYER (O SEU ORIGINAL, SEM 'is_approved') ---
 @admin.register(Player)
@@ -16,8 +16,8 @@ class PlayerAdmin(admin.ModelAdmin):
 # --- O "EDITOR DE JOGOS" (MD3) ---
 class GameInline(admin.TabularInline):
     model = Game
-    fields = ('game_number', 'winner', 'duration', 'player1_farm', 'player2_farm')
-    readonly_fields = ('win_condition', 'is_processed')
+    fields = ('game_number', 'winner', 'win_condition', 'duration', 'player1_farm', 'player2_farm')
+    readonly_fields = ('is_processed')
     extra = 3
     max_num = 3
     autocomplete_fields = ('winner',)
@@ -108,15 +108,14 @@ class MatchAdmin(admin.ModelAdmin):
             loser_farm = game.player2_farm if game.winner == game.match.player1 else game.player1_farm
 
             game.winner.remove_match_result(
-                match_duration=game.duration,
-                did_win=True,
-                farm=winner_farm
+                did_win=True, farm=winner_farm,
+                win_condition=game.win_condition, 
+                match_duration=game.duration
             )
-            
             loser.remove_match_result(
-                match_duration=game.duration,
-                did_win=False,
-                farm=loser_farm
+                did_win=False, farm=loser_farm,
+                win_condition=game.win_condition, 
+                match_duration=game.duration
             )
             
         obj.games.update(is_processed=False, win_condition=None)
@@ -142,22 +141,26 @@ class MatchAdmin(admin.ModelAdmin):
             winner_farm = game.player1_farm if game.winner == player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == player1 else game.player1_farm
             
+            if not game.win_condition:
+                 self.message_user(request, f"ERRO: A 'Condição de Vitória' do Jogo {game.game_number} não foi preenchida.", messages.ERROR)
+                 raise transaction.TransactionManagementError("Condição de Vitória obrigatória.")
+
 
             if game.duration >= MATCH_FARM_LIMIT:
                 game.win_condition = WIN_CONDITION_FARM
             else:
                 game.win_condition = WIN_CONDITION_FIRST_BLOOD
             
-            game.winner.add_match_result(
-                match_duration=game.duration,
-                did_win=True,
-                farm=winner_farm
+           game.winner.add_match_result(
+                did_win=True, farm=winner_farm,
+                win_condition=game.win_condition, 
+                match_duration=game.duration
             )
 
             loser.add_match_result(
-                match_duration=game.duration,
-                did_win=False,
-                farm=loser_farm
+                did_win=False, farm=loser_farm,
+                win_condition=game.win_condition, 
+                match_duration=game.duration
             )
             
             if game.winner == player1:

@@ -11,10 +11,12 @@ ROUND_CHOICES = [ (i, f"Rodada {i}") for i in range(1, TOTAL_ROUNDS + 1) ]
 MATCH_FARM_LIMIT = timedelta(minutes=12) # Coloque seu limite aqui
 
 WIN_CONDITION_FIRST_BLOOD = 'first_blood'
-WIN_CONDITION_FARM = 'farm'
+WIN_CONDITION_FARM_80 = 'farm_80' 
+WIN_CONDITION_TIME_FARM = 'time_farm'
 WIN_CONDITION_CHOICES = [
-    (WIN_CONDITION_FIRST_BLOOD, "First Blood"),
-    (WIN_CONDITION_FARM, "Farm"),
+    (WIN_CONDITION_FIRST_BLOOD, "Kill (First Blood)"),
+    (WIN_CONDITION_FARM_80, "Farm (80 CS)"),
+    (WIN_CONDITION_TIME_FARM, "Farm (Tempo > 12min)"),
 ]
 
 STATUS_SCHEDULED = 'scheduled'
@@ -110,42 +112,52 @@ class Player(models.Model):
         return self.series_wins * 3
 
     @transaction.atomic 
-    def add_match_result(self, match_duration: timedelta, did_win: bool, farm: int):
+   def add_match_result(self, did_win: bool, farm: int, win_condition: str, match_duration: timedelta):
         update_fields = {}
         if did_win:
             update_fields['wins'] = F('wins') + 1
             update_fields['total_win_time'] = F('total_win_time') + match_duration
-            if match_duration >= MATCH_FARM_LIMIT:
+            
+            if win_condition in [WIN_CONDITION_FARM_80, WIN_CONDITION_TIME_FARM]:
                 update_fields['farm_wins'] = F('farm_wins') + 1
-            else: 
+            elif win_condition == WIN_CONDITION_FIRST_BLOOD: 
                 update_fields['first_blood_wins'] = F('first_blood_wins') + 1
                 update_fields['total_kills'] = F('total_kills') + 1
+            
             update_fields['total_farm'] = F('total_farm') + farm
-        else:
+        
+        else: 
             update_fields['losses'] = F('losses') + 1
             update_fields['total_farm'] = F('total_farm') + farm
-            if match_duration < MATCH_FARM_LIMIT:
+            
+            if win_condition == WIN_CONDITION_FIRST_BLOOD:
                 update_fields['total_deaths'] = F('total_deaths') + 1
+        
         Player.objects.filter(pk=self.pk).update(**update_fields)
         self.refresh_from_db()
 
     @transaction.atomic
-    def remove_match_result(self, match_duration: timedelta, did_win: bool, farm: int):
+    def remove_match_result(self, did_win: bool, farm: int, win_condition: str, match_duration: timedelta):
         update_fields = {}
         if did_win:
             update_fields['wins'] = F('wins') - 1
             update_fields['total_win_time'] = F('total_win_time') - match_duration
-            if match_duration >= MATCH_FARM_LIMIT:
+            
+            if win_condition in [WIN_CONDITION_FARM_80, WIN_CONDITION_TIME_FARM]:
                 update_fields['farm_wins'] = F('farm_wins') - 1
-            else: 
+            elif win_condition == WIN_CONDITION_FIRST_BLOOD:
                 update_fields['first_blood_wins'] = F('first_blood_wins') - 1
                 update_fields['total_kills'] = F('total_kills') - 1
+            
             update_fields['total_farm'] = F('total_farm') - farm
-        else:
+        
+        else: 
             update_fields['losses'] = F('losses') - 1
             update_fields['total_farm'] = F('total_farm') - farm
-            if match_duration < MATCH_FARM_LIMIT:
+            
+            if win_condition == WIN_CONDITION_FIRST_BLOOD:
                 update_fields['total_deaths'] = F('total_deaths') - 1
+        
         Player.objects.filter(pk=self.pk).update(**update_fields)
         self.refresh_from_db()
 
@@ -240,10 +252,11 @@ class Game(models.Model):
 
     # Condição de vitória (calculado)
     win_condition = models.CharField(
+        verbose_name="Condição de Vitória",
         max_length=20, 
-        choices=WIN_CONDITION_CHOICES, # Reutiliza as choices do Match
-        null=True, blank=True,
-        editable=False # Será sempre calculado
+        choices=WIN_CONDITION_CHOICES,
+        null=True, 
+        blank=True, 
     )
 
     # Nosso "lacre" de segurança para não processar duas vezes
