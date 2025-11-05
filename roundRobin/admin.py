@@ -5,6 +5,10 @@ from django.db import transaction
 from .models import Player, Match, Game 
 from .models import MATCH_FARM_LIMIT, WIN_CONDITION_FARM_80, WIN_CONDITION_TIME_FARM, WIN_CONDITION_FIRST_BLOOD
 
+class MissingWinConditionError(Exception):
+    """Raised when a Game is missing its win_condition."""
+    pass
+    
 # --- ADMIN DO PLAYER (O SEU ORIGINAL, SEM 'is_approved') ---
 @admin.register(Player)
 class PlayerAdmin(admin.ModelAdmin):
@@ -141,10 +145,9 @@ class MatchAdmin(admin.ModelAdmin):
             winner_farm = game.player1_farm if game.winner == player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == player1 else game.player1_farm
             
-            if not game.win_condition:
-                 self.message_user(request, f"ERRO: A 'Condição de Vitória' do Jogo {game.game_number} não foi preenchida.", messages.ERROR)
-                 raise transaction.TransactionManagementError("Condição de Vitória obrigatória.")
-
+              if not game.win_condition:
++                 self.message_user(request, f"ERRO: A 'Condição de Vitória' do Jogo {game.game_number} não foi preenchida.", messages.ERROR)
++                 raise MissingWinConditionError(f"Condição de Vitória obrigatória para o Jogo {game.game_number}.")
 
             if game.duration >= MATCH_FARM_LIMIT:
                 game.win_condition = WIN_CONDITION_FARM
