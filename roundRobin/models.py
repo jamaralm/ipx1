@@ -1,14 +1,12 @@
 from django.db import models
 from django.db.models import F
 from datetime import timedelta
-from django.db import transaction # Necessário para o @transaction.atomic
+from django.db import transaction
 
-# Define o tempo limite que diferencia uma vitória "rápida" de uma "longa"
-MATCH_FARM_LIMIT = timedelta(minutes=12)
 TOTAL_ROUNDS = 10
 ROUND_CHOICES = [ (i, f"Rodada {i}") for i in range(1, TOTAL_ROUNDS + 1) ]
 
-MATCH_FARM_LIMIT = timedelta(minutes=12) # Coloque seu limite aqui
+MATCH_FARM_LIMIT = timedelta(minutes=12)
 
 WIN_CONDITION_FIRST_BLOOD = 'first_blood'
 WIN_CONDITION_FARM_80 = 'farm_80' 
@@ -20,17 +18,13 @@ WIN_CONDITION_CHOICES = [
 ]
 
 STATUS_SCHEDULED = 'scheduled'
-STATUS_LIVE = 'live'
 STATUS_COMPLETED = 'completed'
 STATUS_CHOICES = [
     (STATUS_SCHEDULED, 'Agendada'),
-    (STATUS_LIVE, 'Ao Vivo'),
     (STATUS_COMPLETED, 'Concluída'),
 ]
 
 class Player(models.Model):
-
-    # --- CAMPOS ARMAZENADOS NO BANCO DE DADOS ---
     username = models.CharField(
         verbose_name = "Nome de Usuario",
         max_length=50, 
@@ -112,7 +106,7 @@ class Player(models.Model):
         return self.series_wins * 3
 
     @transaction.atomic 
-   def add_match_result(self, did_win: bool, farm: int, win_condition: str, match_duration: timedelta):
+    def add_match_result(self, did_win: bool, farm: int, win_condition: str, match_duration: timedelta):
         update_fields = {}
         if did_win:
             update_fields['wins'] = F('wins') + 1
@@ -162,23 +156,11 @@ class Player(models.Model):
         self.refresh_from_db()
 
 class Match(models.Model):
-    
-    # --- NOVOS: Estados da Partida ---
-    STATUS_SCHEDULED = 'scheduled'
-    STATUS_LIVE = 'live'
-    STATUS_COMPLETED = 'completed'
-    STATUS_CHOICES = [
-        (STATUS_SCHEDULED, 'Agendada'),
-        (STATUS_LIVE, 'Ao Vivo'),
-        (STATUS_COMPLETED, 'Concluída'),
-    ]
-
-    # --- NOVO: Campo de Status ---
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
-        default=STATUS_SCHEDULED, # Toda nova partida começa como "Agendada"
-        db_index=True # Facilita filtrar por status
+        default=STATUS_SCHEDULED,
+        db_index=True
     )
 
     # --- Campos de Relacionamento ---
@@ -207,9 +189,9 @@ class Match(models.Model):
         verbose_name_plural = "Confrontos (MD3)"
 
     def __str__(self):
-        if self.status == self.STATUS_COMPLETED and self.series_winner:
+        if self.status == STATUS_COMPLETED and self.series_winner:
             return f"[R{self.round_number}] {self.series_winner.username} venceu"
-        elif self.status == self.STATUS_SCHEDULED:
+        elif self.status == STATUS_SCHEDULED:
             return f"[R{self.round_number}] {self.player1.username} vs {self.player2.username} (Agendada)"
         else:
             return f"[R{self.round_number}] {self.player1.username} vs {self.player2.username} ({self.get_status_display()})"

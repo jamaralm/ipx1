@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Player, Match, TOTAL_ROUNDS
+from .models import Player, Match, TOTAL_ROUNDS, STATUS_COMPLETED, STATUS_SCHEDULED
 
 def leaderboard_view(request):
     """
@@ -81,9 +81,8 @@ def match_list_view(request):
         'rounds_list': rounds_data,
         
         # NOVO: Passamos as constantes de status para o template
-        'STATUS_COMPLETED': Match.STATUS_COMPLETED,
-        'STATUS_LIVE': Match.STATUS_LIVE,
-        'STATUS_SCHEDULED': Match.STATUS_SCHEDULED,
+        'STATUS_COMPLETED': STATUS_COMPLETED,
+        'STATUS_SCHEDULED': STATUS_SCHEDULED,
     }
     
     return render(request, 'roundRobin/match_list.html', context)

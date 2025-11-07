@@ -1,9 +1,9 @@
 from django.contrib import admin, messages
 from django.db import transaction
 
-# --- IMPORTS CORRIGIDOS ---
 from .models import Player, Match, Game 
 from .models import MATCH_FARM_LIMIT, WIN_CONDITION_FARM_80, WIN_CONDITION_TIME_FARM, WIN_CONDITION_FIRST_BLOOD
+from .models import STATUS_COMPLETED
 
 class MissingWinConditionError(Exception):
     """Raised when a Game is missing its win_condition."""
@@ -21,7 +21,7 @@ class PlayerAdmin(admin.ModelAdmin):
 class GameInline(admin.TabularInline):
     model = Game
     fields = ('game_number', 'winner', 'win_condition', 'duration', 'player1_farm', 'player2_farm')
-    readonly_fields = ('is_processed')
+    readonly_fields = ('is_processed',)
     extra = 3
     max_num = 3
     autocomplete_fields = ('winner',)
@@ -85,7 +85,7 @@ class MatchAdmin(admin.ModelAdmin):
             )
 
     def get_readonly_fields(self, request, obj=None):
-        if obj and obj.status == Match.STATUS_COMPLETED:
+        if obj and obj.status == STATUS_COMPLETED:
             return ('player1', 'player2', 'round_number', 'scheduled_time', 'series_winner')
         
         # O Vencedor da Série é sempre somente leitura, pois é calculado
@@ -121,13 +121,11 @@ class MatchAdmin(admin.ModelAdmin):
                 win_condition=game.win_condition, 
                 match_duration=game.duration
             )
-            
-        obj.games.update(is_processed=False, win_condition=None)
+
+        obj.games.update(is_processed=False)
         obj.series_winner = None
-            
 
-
-        if obj.status != Match.STATUS_COMPLETED:
+        if obj.status != STATUS_COMPLETED:
             obj.save()
             self.message_user(request, "Estatísticas da série foram revertidas.", messages.WARNING)
             return
@@ -145,16 +143,11 @@ class MatchAdmin(admin.ModelAdmin):
             winner_farm = game.player1_farm if game.winner == player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == player1 else game.player1_farm
             
-              if not game.win_condition:
-+                 self.message_user(request, f"ERRO: A 'Condição de Vitória' do Jogo {game.game_number} não foi preenchida.", messages.ERROR)
-+                 raise MissingWinConditionError(f"Condição de Vitória obrigatória para o Jogo {game.game_number}.")
-
-            if game.duration >= MATCH_FARM_LIMIT:
-                game.win_condition = WIN_CONDITION_FARM
-            else:
-                game.win_condition = WIN_CONDITION_FIRST_BLOOD
+            if game.win_condition == None:
+                self.message_user(request, f"ERRO: A 'Condição de Vitória' do Jogo {game.game_number} não foi preenchida.", messages.ERROR)
+                raise MissingWinConditionError(f"Condição de Vitória obrigatória para o Jogo {game.game_number}.")
             
-           game.winner.add_match_result(
+            game.winner.add_match_result(
                 did_win=True, farm=winner_farm,
                 win_condition=game.win_condition, 
                 match_duration=game.duration
