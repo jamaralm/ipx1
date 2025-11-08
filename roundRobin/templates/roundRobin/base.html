@@ -6,18 +6,18 @@
     <title>{% block title %}IPX1{% endblock %}</title>
     
     <style>
-        /* CSS Global e Dark Theme */
+        /* [Seção CSS Global e Dark Theme... (manter)] */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
         :root {
-            --bg-color: #121212; /* Fundo mais escuro */
+            --bg-color: #121212;
             --sidebar-bg: #1e1e1e;
             --content-bg: #1a1d21;
             --text-color: #e0e0e0;
             --text-muted: #888;
             --header-color: #ffffff;
             --border-color: #3a3d41;
-            --accent-color: #007bff; /* Um azul vibrante para o acento */
+            --accent-color: #007bff;
             --hover-color: #2a2d31;
             --win-color: #4CAF50;
             --lose-color: #F44336;
@@ -39,15 +39,16 @@
         /* --- A Barra Lateral (Desktop) --- */
         .sidebar {
             width: 240px;
-            height: 100vh; /* Altura total da tela */
-            position: fixed; /* Fica presa no lugar */
+            height: 100vh;
+            position: fixed;
             top: 0;
             left: 0;
             background-color: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             padding: 20px;
         }
-
+        /* ... outros estilos de desktop ... */
+        
         .sidebar-header {
             text-align: center;
             margin-bottom: 30px;
@@ -85,7 +86,6 @@
 
         /* --- O Conteúdo Principal (Desktop) --- */
         .content {
-            /* Empurra o conteúdo para a direita da barra lateral */
             margin-left: 240px; 
             padding: 30px;
         }
@@ -105,7 +105,7 @@
             margin-bottom: 15px;
         }
         
-        /* Estilos da Tabela (do seu leaderboard) */
+        /* [Seção Estilos da Tabela e Partidas... (manter)] */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -124,7 +124,6 @@
             background-color: var(--hover-color);
         }
         
-        /* Estilos da Lista de Partidas (do seu match_list) */
         .match-list { list-style: none; }
         .match-item {
             display: flex;
@@ -144,11 +143,11 @@
 
         .video-wrapper-16-9 {
             position: relative;
-            padding-top: 56.25%; /* 9 (altura) / 16 (largura) = 0.5625 = 56.25% */
+            padding-top: 56.25%;
             height: 0;
             overflow: hidden;
-            border-radius: 8px; /* Opcional: para combinar com seu container */
-            background: #000; /* Fundo preto para o caso do vídeo demorar a carregar */
+            border-radius: 8px;
+            background: #000;
         }
         
         .video-wrapper-16-9 iframe {
@@ -163,41 +162,83 @@
         /* ========================================= */
         /* === INÍCIO DAS REGRAS DE RESPONSIVIDADE === */
         /* ========================================= */
+
+        /* Novo estilo para o botão hambúrguer */
+        .menu-toggle {
+            display: none; /* Escondido por padrão (desktop) */
+            background: none;
+            border: none;
+            color: var(--header-color);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 10px;
+        }
+
         @media (max-width: 768px) {
             
-            /* 1. Transforma a Sidebar em um Header */
+            /* 1. O Menu Sidebar vira o Header Topo */
             .sidebar {
-                position: static; /* Deixa de ser fixa */
+                position: fixed; /* Fica fixo no topo da tela */
                 width: 100%;
                 height: auto;
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
-                padding: 0 15px; /* Ajusta o padding */
+                padding: 10px 15px;
+                z-index: 1000; /* Garante que fique acima de outros elementos */
                 
-                /* Alinha o Logo e a Nav */
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
+            
             .sidebar-header {
                 margin-bottom: 0;
                 text-align: left;
             }
-            .nav-list {
-                display: flex; /* Faz os links ficarem lado a lado */
-            }
-            .nav-list li {
-                margin-bottom: 0;
-                margin-left: 5px;
-            }
-            .nav-list a {
-                padding: 15px 10px; /* Ajusta o padding do link */
+            
+            /* Mostra o botão hambúrguer em mobile */
+            .menu-toggle {
+                display: block;
             }
             
-            /* 2. Remove a margem do conteúdo */
+            /* Esconde a lista de navegação por padrão */
+            .nav-wrapper {
+                position: absolute;
+                top: 100%; /* Abaixo do header */
+                left: 0;
+                width: 100%;
+                max-height: 0; /* Inicialmente escondido */
+                overflow: hidden;
+                background-color: var(--sidebar-bg);
+                border-top: 1px solid var(--border-color);
+                transition: max-height 0.3s ease-out;
+            }
+            
+            /* Classe para mostrar o menu */
+            .nav-wrapper.open {
+                max-height: 300px; /* Altura que acomoda seus links (ajuste se necessário) */
+                border-bottom: 1px solid var(--border-color);
+            }
+            
+            /* Estiliza a lista no modo mobile */
+            .nav-list {
+                display: block; /* Volta para lista vertical */
+                padding: 10px 15px;
+            }
+            .nav-list li {
+                margin-bottom: 5px;
+            }
+            .nav-list a {
+                padding: 10px 15px;
+                /* Corrije o bug de desktop quebrarem */
+                width: 100%; 
+                border-radius: 4px;
+            }
+            
+            /* 2. Ajusta o Conteúdo Principal */
             .content {
-                margin-left: 0; /* Remove a margem da sidebar */
-                padding: 15px;
+                margin-left: 0;
+                padding: 70px 15px 15px; 
             }
             .container {
                 padding: 15px;
@@ -205,36 +246,33 @@
                 box-shadow: none;
             }
 
-            /* 3. Faz a Tabela (Leaderboard) rolar horizontalmente */
+            /* [Seções de Responsividade de Tabela e Lista de Partidas... (manter)] */
             .table-wrapper {
-                overflow-x: auto; /* A MÁGICA! */
-                -webkit-overflow-scrolling: touch; /* Melhora a rolagem no iOS */
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
                 border: 1px solid var(--border-color);
                 border-radius: 4px;
             }
-            /* Força a tabela a não "espremer" as colunas */
             .table-wrapper table {
                 white-space: nowrap;
-                min-width: 600px; /* Garante que a tabela tenha um tamanho mínimo */
+                min-width: 600px;
             }
             th, td {
-                padding: 10px; /* Diminui o padding em telas menores */
+                padding: 10px;
             }
             h1 {
-                font-size: 1.8em; /* Diminui o H1 */
+                font-size: 1.8em;
             }
-            
-            /* 4. Empilha a Lista de Partidas (Match List) */
             .match-item {
-                flex-direction: column; /* Empilha os itens */
-                align-items: flex-start; /* Alinha no início */
+                flex-direction: column;
+                align-items: flex-start;
                 padding: 12px;
             }
             .match-players {
                 font-size: 1.1em;
             }
             .match-details {
-                text-align: left; /* Alinha à esquerda */
+                text-align: left;
                 width: 100%;
                 margin-top: 10px;
                 padding-top: 10px;
@@ -250,38 +288,50 @@
         <div class="sidebar-header">
             <h2>IPX1</h2>
         </div>
-        <ul class="nav-list">
-            <li>
-                <a href="{% url 'leaderboard' %}" 
-                   {% if request.resolver_match.url_name == 'leaderboard' %}class="active"{% endif %}>
-                   Classificação
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'match-list' %}"
-                   {% if request.resolver_match.url_name == 'match-list' %}class="active"{% endif %}>
-                   Partidas
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'playoffs' %}"
-                   {% if request.resolver_match.url_name == 'playoffs' %}class="active"{% endif %}>
-                   Playoffs
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'livestream' %}"
-                   {% if request.resolver_match.url_name == 'livestream' %}class="active"{% endif %}>
-                   Live
-                </a>
-            </li>
-        </ul>
+        
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+
+        <div class="nav-wrapper" id="nav-wrapper">
+            <ul class="nav-list">
+                <li>
+                    <a href="{% url 'leaderboard' %}" 
+                       {% if request.resolver_match.url_name == 'leaderboard' %}class="active"{% endif %}>
+                       Classificação
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'match-list' %}"
+                       {% if request.resolver_match.url_name == 'match-list' %}class="active"{% endif %}>
+                       Partidas
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'playoffs' %}"
+                       {% if request.resolver_match.url_name == 'playoffs' %}class="active"{% endif %}>
+                       Playoffs
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'livestream' %}"
+                       {% if request.resolver_match.url_name == 'livestream' %}class="active"{% endif %}>
+                       Live
+                    </a>
+                </li>
+            </ul>
+        </div>
     </nav>
 
     <main class="content">
         {% block content %}
         {% endblock %}
     </main>
+
+    <script>
+        document.getElementById('menu-toggle').onclick = function() {
+            var navWrapper = document.getElementById('nav-wrapper');
+            navWrapper.classList.toggle('open');
+        };
+    </script>
 
 </body>
 </html>
