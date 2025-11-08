@@ -187,7 +187,7 @@ class Match(models.Model):
         ordering = ['round_number', 'scheduled_time']
         verbose_name = "Confronto (MD3)" # Mudei o nome para ficar claro
         verbose_name_plural = "Confrontos (MD3)"
-
+ 
     def __str__(self):
         if self.status == STATUS_COMPLETED and self.series_winner:
             return f"[R{self.round_number}] {self.series_winner.username} venceu"
