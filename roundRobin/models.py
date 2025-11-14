@@ -181,6 +181,12 @@ class Match(models.Model):
         verbose_name="Vencedor da Série (MD3)"
     )
 
+    is_wo = models.BooleanField(
+        verbose_name="Vitória por W.O.",
+        default=False,
+        help_text="Marque se esta série foi vencida por W.O. O 'Vencedor da Série' deve ser definido manualmente e o status deve ser 'Concluída'."
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
