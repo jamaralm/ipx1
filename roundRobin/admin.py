@@ -59,8 +59,9 @@ class MatchAdmin(admin.ModelAdmin):
         'round_number',
         'series_winner', 
         'scheduled_time',
+        'is_wo',
     )
-    list_filter = ('status', 'round_number', 'scheduled_time')
+    list_filter = ('status', 'round_number', 'scheduled_time', 'is_wo')
     inlines = [GameInline]
     
     # (Corrigido para usar 'series_winner')
@@ -80,16 +81,22 @@ class MatchAdmin(admin.ModelAdmin):
                     'fields': ('status', ('player1', 'player2'), 'round_number')
                 }),
                 ('Resultado da Série (MD3)', {
-                    'fields': ('series_winner',) 
+                    'fields': ('series_winner', 'is_wo') 
                 })
             )
 
     def get_readonly_fields(self, request, obj=None):
-        if obj and obj.status == STATUS_COMPLETED:
-            return ('player1', 'player2', 'round_number', 'scheduled_time', 'series_winner')
+        if obj and obj.status == STATUS_COMPLETED and not obj.is_wo:
+            # Concluída normalmente (com jogos), trava tudo.
+            return ('player1', 'player2', 'round_number', 'scheduled_time', 'series_winner', 'is_wo')
         
-        # O Vencedor da Série é sempre somente leitura, pois é calculado
-        return ('series_winner',)
+        if obj and obj.status == STATUS_COMPLETED and obj.is_wo:
+            # Concluída por WO, trava agendamento mas permite mudar vencedor se necessário
+            return ('player1', 'player2', 'round_number', 'scheduled_time')
+            
+        # Se estiver Agendada, permite edição de tudo
+        # 'series_winner' pode ser definido para WO, ou será calculado/ignorado
+        return ()
 
 
     # --- A LÓGICA DE PROCESSAMENTO (MD3) ---
@@ -101,13 +108,14 @@ class MatchAdmin(admin.ModelAdmin):
         player1 = obj.player1
         player2 = obj.player2
         
+        # --- 1. REVERTER ESTATÍSTICAS ---
+        # Sempre reverta primeiro, para o caso de uma partida
+        # normal estar sendo convertida para W.O.
         games_to_revert = obj.games.filter(is_processed=True, winner__isnull=False)
 
         for game in games_to_revert:
             game: Game 
-            
             loser = game.match.player2 if game.winner == game.match.player1 else game.match.player1
-            
             winner_farm = game.player1_farm if game.winner == game.match.player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == game.match.player1 else game.player1_farm
 
@@ -123,11 +131,31 @@ class MatchAdmin(admin.ModelAdmin):
             )
 
         obj.games.update(is_processed=False)
-        obj.series_winner = None
+        
+        # --- 2. LÓGICA DE W.O. ---
+        if obj.is_wo:
+            # Se for W.O., verifique se o admin selecionou um vencedor
+            if not obj.series_winner:
+                self.message_user(request, "ERRO: Se 'Vitória por W.O.' está marcada, você DEVE selecionar um 'Vencedor da Série'.", messages.ERROR)
+                raise transaction.TransactionManagementError("W.O. must have a series_winner.")
+            
+            # Garanta que o status seja 'Concluída'
+            obj.status = STATUS_COMPLETED
+            obj.save()
+            
+            self.message_user(request, f"Partida salva como W.O. para {obj.series_winner.username}. Apenas 3 pontos de série foram dados (sem K/D/Farm).", messages.SUCCESS)
+            
+            # Pula todo o processamento de jogos
+            return
 
+        # --- 3. LÓGICA DE PARTIDA NORMAL (SÓ RODA SE NÃO FOR W.O.) ---
+        
+        # Reseta o vencedor da série (será recalculado) se não for WO
+        obj.series_winner = None
+        
         if obj.status != STATUS_COMPLETED:
             obj.save()
-            self.message_user(request, "Estatísticas da série foram revertidas.", messages.WARNING)
+            self.message_user(request, "Estatísticas da série foram revertidas (status não 'Concluída').", messages.WARNING)
             return
 
         all_completed_games = obj.games.filter(winner__isnull=False)
@@ -139,7 +167,6 @@ class MatchAdmin(admin.ModelAdmin):
             game: Game
 
             loser = player2 if game.winner == player1 else player1
-
             winner_farm = game.player1_farm if game.winner == player1 else game.player2_farm
             loser_farm = game.player2_farm if game.winner == player1 else game.player1_farm
             
@@ -175,5 +202,5 @@ class MatchAdmin(admin.ModelAdmin):
         obj.save()
         
         self.message_user(request, 
-                          "Estatísticas da série foram recalculadas e salvas com sucesso.", 
+                          "Estatísticas da série (partida normal) foram recalculadas e salvas com sucesso.", 
                           messages.SUCCESS)
